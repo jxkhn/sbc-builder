@@ -1,0 +1,22 @@
+#!/bin/sh
+# Runs on every kernel install, before initramfs-tools and u-boot-menu (zz-u-boot-menu).
+#  1. Store the kernel uncompressed: mainline U-Boot only unpacks gzip'd kernels up to
+#     kernel_comp_size (32 MiB on RK3308), an uncompressed Image always boots.
+#  2. Copy the kernel's DT overlays to /boot/dtbo/ for U_BOOT_FDT_OVERLAYS.
+set -e
+version="$1"
+image="${2:-/boot/vmlinuz-$version}"
+
+if [ -f "$image" ]; then
+	magic=$(head -c2 "$image" | od -An -tx1 | tr -d ' \n')
+	if [ "$magic" = "1f8b" ]; then
+		zcat "$image" >"$image.tmp" && mv "$image.tmp" "$image"
+	fi
+fi
+
+for dir in /usr/lib/linux-image-"$version"/*/overlay; do
+	[ -d "$dir" ] || continue
+	mkdir -p /boot/dtbo
+	cp -f "$dir"/*.dtbo /boot/dtbo/ 2>/dev/null || true
+done
+exit 0

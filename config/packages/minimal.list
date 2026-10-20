@@ -1,0 +1,7 @@
+# Always installed (on top of Debian's Priority: required set). One or more per line, '#' comments.
+systemd-sysv systemd-timesyncd udev dbus kmod
+initramfs-tools u-boot-menu e2fsprogs
+openssh-server sudo ca-certificates
+locales tzdata
+iproute2 iputils-ping procps
+less nano

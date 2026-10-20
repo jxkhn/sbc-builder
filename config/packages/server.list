@@ -1,0 +1,6 @@
+# Headless server set, added to minimal.list
+bash-completion curl wget rsync gnupg
+htop lsof psmisc file unzip zstd
+tmux
+ethtool bind9-dnsutils
+usbutils i2c-tools

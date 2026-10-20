@@ -1,0 +1,34 @@
+From: sbc-builder <root@localhost>
+Subject: [PATCH] net: phy: realtek: RTL8211F: disable ALDPS when the MAC needs RXC
+
+ALDPS (link-down power saving) stops the RTL8211F's RXC clock while there is
+no link. rtl8211f_config_aldps() only ever sets ALDPS (DT opt-in) and keeps
+whatever the PHY had otherwise - which after a hardware reset can be ALDPS
+on. stmmac asks for RXC to stay on (mac_requires_rxc ->
+PHY_F_RXC_ALWAYS_ON) because its DMA software reset cannot complete without
+it; on RK3566 boards (Radxa ZERO 3E) the first open before link-up then fails
+with "Failed to reset the dma". Clear ALDPS when that flag is set.
+
+---
+--- a/drivers/net/phy/realtek/realtek_main.c
++++ b/drivers/net/phy/realtek/realtek_main.c
+@@ -751,9 +751,17 @@
+ 		   RTL8211F_ALDPS_ENABLE |
+ 		   RTL8211F_ALDPS_XTAL_OFF;
+ 
+-	/* The value is preserved if the device tree property is absent */
+-	if (!priv->enable_aldps)
++	if (!priv->enable_aldps) {
++		/* The MAC needs RXC (e.g. stmmac cannot finish its DMA reset
++		 * without it): make sure ALDPS is off, whatever the PHY's reset
++		 * default or the bootloader left behind.
++		 */
++		if (phydev->dev_flags & PHY_F_RXC_ALWAYS_ON)
++			return phy_modify(phydev, RTL8211F_PHYCR1, mask, 0);
++
++		/* Otherwise the value is preserved */
+ 		return 0;
++	}
+ 
+ 	return phy_modify(phydev, RTL8211F_PHYCR1, mask, mask);
+ }

@@ -1,0 +1,42 @@
+#!/bin/sh
+# Usage: @PREFIX@-u-boot-install [--yes] [device]   - write U-Boot for @BOARD@ to the boot device
+# Without a device, the disk holding / is used. Refuses to run if a partition overlaps U-Boot.
+set -eu
+BIN=/usr/lib/@PREFIX@-u-boot/@BOARD@/@BIN@
+OFFSET=@OFFSET@
+YES=no
+DEV=""
+for a in "$@"; do
+	case $a in
+		-y | --yes) YES=yes ;;
+		-h | --help) sed -n '2,3p' "$0" | sed 's/^# //'; exit 0 ;;
+		*) DEV=$a ;;
+	esac
+done
+[ "$(id -u)" -eq 0 ] || { echo "run as root" >&2; exit 1; }
+[ -r "$BIN" ] || { echo "missing $BIN" >&2; exit 1; }
+if [ -z "$DEV" ]; then
+	src=$(findmnt -n -o SOURCE /)
+	DEV=/dev/$(lsblk -no PKNAME "$src" | head -n1)
+fi
+[ -b "$DEV" ] || { echo "not a block device: $DEV" >&2; exit 1; }
+
+end=$((OFFSET + ($(stat -c %s "$BIN") + 511) / 512))
+for p in /sys/class/block/"$(basename "$DEV")"/*/start; do
+	[ -r "$p" ] || continue
+	start=$(cat "$p")
+	if [ "$start" -lt "$end" ]; then
+		echo "Partition $(basename "$(dirname "$p")") starts at sector $start but U-Boot needs sectors $OFFSET-$end. Aborting." >&2
+		exit 1
+	fi
+done
+
+if [ "$YES" != yes ]; then
+	printf 'Write %s (%s) to %s at sector %s? [y/N] ' "$(basename "$BIN")" \
+		"$(sed -n 's/^u-boot=//p' "$(dirname "$BIN")/BUILDINFO" 2>/dev/null)" "$DEV" "$OFFSET"
+	read -r a
+	case $a in y | Y | yes) ;; *) echo aborted; exit 1 ;; esac
+fi
+dd if="$BIN" of="$DEV" seek="$OFFSET" conv=notrunc,fsync status=none
+sync
+echo "U-Boot written to $DEV"

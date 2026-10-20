@@ -1,0 +1,7 @@
+/cache/
+/work/
+/output/
+# userpatches/ holds local configs (may contain password hashes), keys and patches.
+# Only the example is tracked; add other files with `git add -f` if you mean to share them.
+/userpatches/*
+!/userpatches/config-example.conf

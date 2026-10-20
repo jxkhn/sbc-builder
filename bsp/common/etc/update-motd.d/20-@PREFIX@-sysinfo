@@ -1,0 +1,17 @@
+#!/bin/sh
+# Short system summary at login (no network calls).
+model=$(tr -d '\0' </proc/device-tree/model 2>/dev/null || echo "unknown board")
+. /etc/os-release
+load=$(cut -d' ' -f1-3 /proc/loadavg)
+mem=$(free -m | awk '/^Mem:/ {printf "%d/%d MiB", $3, $2}')
+root=$(df -h / | awk 'NR == 2 {printf "%s/%s (%s)", $3, $2, $5}')
+temp=""
+for z in /sys/class/thermal/thermal_zone*/temp; do
+	[ -r "$z" ] && { temp=$(awk '{printf "  temp %.0f°C", $1 / 1000}' "$z"); break; }
+done
+ips=$(ip -4 -o addr show scope global 2>/dev/null | awk '{split($4, a, "/"); printf "%s %s   ", $2, a[1]}')
+up=$(uptime -p 2>/dev/null | sed 's/^up //')
+
+printf '\n %s | %s | kernel %s\n' "$model" "$PRETTY_NAME" "$(uname -r)"
+printf ' up %s | load %s | mem %s | root %s%s\n' "$up" "$load" "$mem" "$root" "$temp"
+printf ' %s\n\n' "${ips:-no IPv4 address}"

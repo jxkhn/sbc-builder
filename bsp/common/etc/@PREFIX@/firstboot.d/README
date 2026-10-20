@@ -1,0 +1,3 @@
+Executable files in this directory run once, as root, on the first boot of the
+image (before networking starts), in alphabetical order. Put fleet enrolment,
+per-device registration etc. here - e.g. via userpatches/overlay/etc/<prefix>/firstboot.d/.

@@ -1,0 +1,43 @@
+From: sbc-builder <root@localhost>
+Subject: [PATCH] arm64: dts: rockchip: radxa-zero-3e: reset Ethernet PHY via MDIO bus
+
+The PHY reset GPIO is described on the PHY node, so Linux only drives it
+after it has read the PHY ID over MDIO. If the bootloader left the PHY in
+reset, the ID read fails and stmmac reports "cannot attach to PHY
+(error: -ENODEV)". Giving the PHY ID in the compatible avoids that, but then
+phylib asserts the reset again on every detach and the GMAC can come up
+without its PHY clocks ("Failed to reset the dma").
+
+Describe the reset on the MDIO bus instead: it is released once before the
+bus is scanned, the PHY is detected by its real ID, and it stays out of
+reset across open/close.
+
+---
+--- a/arch/arm64/boot/dts/rockchip/rk3566-radxa-zero-3e.dts
++++ b/arch/arm64/boot/dts/rockchip/rk3566-radxa-zero-3e.dts
+@@ -32,14 +32,20 @@
+ };
+ 
+ &mdio1 {
++	/*
++	 * PHY reset on the MDIO bus, not on the PHY node: the bus releases it
++	 * once before scanning, so the PHY ID can be read and the right driver
++	 * binds without relying on the bootloader, and the PHY is not put back
++	 * into reset on every attach/detach (which left the GMAC without its
++	 * clocks: "Failed to reset the dma").
++	 */
++	reset-gpios = <&gpio3 RK_PC0 GPIO_ACTIVE_LOW>;
++	reset-delay-us = <20000>;
++	reset-post-delay-us = <100000>;
++
+ 	rgmii_phy1: ethernet-phy@1 {
+ 		compatible = "ethernet-phy-ieee802.3-c22";
+ 		reg = <1>;
+-		pinctrl-names = "default";
+-		pinctrl-0 = <&gmac1_rstn>;
+-		reset-assert-us = <20000>;
+-		reset-deassert-us = <50000>;
+-		reset-gpios = <&gpio3 RK_PC0 GPIO_ACTIVE_LOW>;
+ 	};
+ };
+ 

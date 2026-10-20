@@ -1,0 +1,11 @@
+[Unit]
+Description=Apply CPU frequency governor
+ConditionPathExists=/sys/devices/system/cpu/cpufreq
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/@PREFIX@/cpufreq.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

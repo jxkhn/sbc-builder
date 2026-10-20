@@ -1,0 +1,52 @@
+From: sbc-builder <root@localhost>
+Subject: [PATCH] phy: rockchip: snps-pcie3: allow 20 ms for PHY SRAM init
+
+After releasing the PHY reset, the driver polls for SRAM init done for only
+500 us. On a Radxa ROCK 3A (RK3568) this regularly times out at boot
+("rockchip_p3phy_rk3568_init: lock failed ... check input refclk and power
+supply", probe fails with -ETIMEDOUT and the NVMe on the PCIe 3.0 x2 slot is
+missing), while re-probing the same controller later via drivers_probe
+succeeds at once - the PHY simply finished after the driver gave up.
+
+Poll every 100 us for up to 20 ms on RK3568 and RK3588.
+
+---
+--- a/drivers/phy/rockchip/phy-rockchip-snps-pcie3.c
++++ b/drivers/phy/rockchip/phy-rockchip-snps-pcie3.c
+@@ -41,6 +41,13 @@
+ #define RK3588_PCIE3PHY_GRF_PHY1_LN1_CON1	0x2104
+ #define RK3588_SRAM_INIT_DONE(reg)		(reg & BIT(0))
+ 
++/*
++ * PHY SRAM init after reset release. 500 us is not always enough: on a ROCK 3A
++ * the first probe at boot failed with "lock failed", while a later re-probe
++ * found the PHY ready. Allow up to 20 ms.
++ */
++#define RK_P3PHY_SRAM_TIMEOUT_US		20000
++
+ #define RK3588_BIFURCATION_LANE_0_1		BIT(0)
+ #define RK3588_BIFURCATION_LANE_2_3		BIT(1)
+ #define RK3588_LANE_AGGREGATION		BIT(2)
+@@ -127,7 +134,7 @@
+ 	ret = regmap_read_poll_timeout(priv->phy_grf,
+ 				       GRF_PCIE30PHY_STATUS0,
+ 				       reg, SRAM_INIT_DONE(reg),
+-				       0, 500);
++				       100, RK_P3PHY_SRAM_TIMEOUT_US);
+ 	if (ret)
+ 		dev_err(&priv->phy->dev, "%s: lock failed 0x%x, check input refclk and power supply\n",
+ 		       __func__, reg);
+@@ -187,11 +194,11 @@
+ 	ret = regmap_read_poll_timeout(priv->phy_grf,
+ 				       RK3588_PCIE3PHY_GRF_PHY0_STATUS1,
+ 				       reg, RK3588_SRAM_INIT_DONE(reg),
+-				       0, 500);
++				       100, RK_P3PHY_SRAM_TIMEOUT_US);
+ 	ret |= regmap_read_poll_timeout(priv->phy_grf,
+ 					RK3588_PCIE3PHY_GRF_PHY1_STATUS1,
+ 					reg, RK3588_SRAM_INIT_DONE(reg),
+-					0, 500);
++					100, RK_P3PHY_SRAM_TIMEOUT_US);
+ 	if (ret)
+ 		dev_err(&priv->phy->dev, "lock failed 0x%x, check input refclk and power supply\n",
+ 			reg);

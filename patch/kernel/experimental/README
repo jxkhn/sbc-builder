@@ -1,0 +1,9 @@
+Not applied by default. Written while debugging a Zero 3E that turned out to have
+defective Ethernet hardware, so neither is verified on a good board:
+
+- board-radxa-zero-3e-ethernet-phy-reset.patch: PHY reset on the MDIO bus. Only needed
+  if the bootloader leaves the PHY in reset ("cannot attach to PHY (error: -ENODEV)"),
+  e.g. with U-Boot newer than the board's pinned v2025.10.
+- general-rtl8211f-disable-aldps-when-mac-needs-rxc.patch: force RTL8211F ALDPS off.
+
+To use one, copy it to userpatches/kernel/rockchip64/.

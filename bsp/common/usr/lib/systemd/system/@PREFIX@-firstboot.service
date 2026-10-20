@@ -1,0 +1,18 @@
+[Unit]
+Description=First boot setup (grow root, hostname, SSH host keys)
+DefaultDependencies=no
+After=local-fs.target systemd-remount-fs.service
+Before=sysinit.target network-pre.target ssh.service systemd-networkd.service NetworkManager.service shutdown.target
+Wants=network-pre.target
+Conflicts=shutdown.target
+ConditionPathExists=!/var/lib/@PREFIX@/firstboot.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/@PREFIX@/firstboot.sh
+RemainAfterExit=yes
+TimeoutSec=600
+StandardOutput=journal+console
+
+[Install]
+WantedBy=sysinit.target
