@@ -97,7 +97,7 @@ opt FDT_OVERLAYS   "Tweaks" string "" "" "DT overlays to enable, e.g. rockchip-r
 
 # ---------------------------------------------------------------- Image
 opt IMAGE_SIZE     "Image" string auto "" "Image size in MiB (auto = content + 25% + 256 MiB; grows on first boot anyway)"
-opt PART_TABLE     "Image" choice gpt "gpt msdos" "Partition table"
+opt PART_TABLE     "Image" choice board "board gpt msdos" "Partition table: board (the board config's choice, else gpt) | gpt | msdos"
 opt ROOTFS_LABEL   "Image" string rootfs "" "Root filesystem label"
 opt COMPRESS       "Image" choice xz "xz zstd none" "Image compression"
 opt OUTPUT_NAME    "Image" string auto "" "Image file name without extension (auto = <prefix>-<board>-<release>-<kernel>-<date>)"
@@ -112,7 +112,7 @@ EXTRA_KEYS="FORCE STAGES MENU INSTALL_DEPS INSTALL_SHIM RKBIN_UPDATE ARMBIAN_UPD
 
 # Board config variables (reset whenever a board is loaded).
 BOARD_VARS=(BOARD_NAME SOC KERNEL_FAMILY ARMBIAN_FAMILY DTB DTS_VENDOR DTB_MAKE_COND KERNEL_CMDLINE
-	UBOOT_DEFCONFIG UBOOT_BIN UBOOT_OFFSET_SECTORS RKBIN_TPL RKBIN_BL31 BOARD_RKBIN_REPO BOARD_UBOOT_VERSION BOARD_TFA_VERSION TPL_OPEN TFA_PLAT
+	UBOOT_DEFCONFIG UBOOT_BIN UBOOT_OFFSET_SECTORS RKBIN_TPL RKBIN_BL31 BOARD_RKBIN_REPO BOARD_UBOOT_VERSION BOARD_TFA_VERSION BOARD_PART_TABLE TPL_OPEN TFA_PLAT
 	BOARD_PACKAGES PATCH_DTS_REGEX PATCH_SOC_REGEX BOARD_NOTES)
 
 PATH_OPTS="KERNEL_CONFIG_FILE KERNEL_PREBUILT_DIR FLEET_REPO_KEY USER_SSH_KEYS ROOT_SSH_KEYS ARMBIAN_DIR"
@@ -213,6 +213,7 @@ finalize_options() {
 	[[ -n $FLEET_REPO_SUITE ]] || FLEET_REPO_SUITE=$RELEASE
 	[[ $UBOOT_VERSION == board ]] && UBOOT_VERSION=${BOARD_UBOOT_VERSION:-latest}
 	[[ $TFA_VERSION == board ]] && TFA_VERSION=${BOARD_TFA_VERSION:-latest}
+	[[ $PART_TABLE == board ]] && PART_TABLE=${BOARD_PART_TABLE:-gpt}
 	[[ -n $RKBIN_REPO ]] || RKBIN_REPO=${BOARD_RKBIN_REPO:-https://github.com/rockchip-linux/rkbin.git}
 	[[ $PKG_PREFIX =~ ^[a-z0-9][a-z0-9+.-]*$ ]] || die "PKG_PREFIX must be a valid Debian package name prefix"
 	# shellcheck disable=SC2034

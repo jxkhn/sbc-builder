@@ -6,11 +6,12 @@ no Armbian packages, apt repos, cron jobs, motd scripts or forked `base-files`.
 
 ## Current state
 
-Early and only lightly tested. Two boards have been tested on real hardware with a bare image
+Early and only lightly tested. Three boards have been tested on real hardware with a bare image
 (boot and networking only; no other peripherals checked):
 
 - **Radxa ROCK 3A**: boots, Ethernet works.
 - **Radxa ZERO 3E**: boots, Ethernet works.
+- **Radxa ROCK Pi S**: boots, Ethernet works (msdos partition table, see the board table).
 
 All other boards are **untested**: they have board files, but no image has been built and booted
 for them yet. Reports are welcome.
@@ -24,7 +25,7 @@ for them yet. Reports are welcome.
 | `radxa-zero3w` | RK3566T | untested | |
 | `rock-3b`, `radxa-e25` | RK3568 | untested | |
 | `rock-3c` | RK3566T | untested | |
-| `rockpi-s` | RK3308 | untested | |
+| `rockpi-s` | RK3308 | tested (boot, networking) | msdos partition table by default: kernel 7.3 finds no partitions on a GPT card here |
 | `rockpi-e`, `rockpi-e-v3` | RK3328 | untested | `TPL_SOURCE=uboot BL31_SOURCE=tfa` gives a blob-free boot chain |
 | `rock-5a`, `rock-5b`, `rock-5b-plus`, `rock-5c` | RK3588(S) | untested | SPI flash boots before the SD card |
 
