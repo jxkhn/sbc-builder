@@ -4,36 +4,50 @@
 # "<prefix>-linux-image-<family>" metapackage that always points at the newest build.
 
 KERNEL_ORG=${KERNEL_ORG:-https://cdn.kernel.org/pub/linux/kernel}
+# Release candidates are only published as snapshots of Linus' tree.
+KERNEL_RC_URL=${KERNEL_RC_URL:-https://git.kernel.org/torvalds/t}
 
 resolve_kernel_version() {
 	case $KERNEL_VERSION in
-		stable | latest | longterm)
+		stable | latest | longterm | mainline)
 			local json
 			json=$(curl -fsSL https://www.kernel.org/releases.json) ||
 				die "Cannot reach kernel.org to resolve KERNEL_VERSION=$KERNEL_VERSION (set an explicit X.Y.Z)"
 			python3 -c '
 import json, sys
 d = json.load(sys.stdin)
-if sys.argv[1] == "longterm":
-    print(next(r["version"] for r in d["releases"] if r["moniker"] == "longterm"))
+if sys.argv[1] in ("longterm", "mainline"):
+    print(next(r["version"] for r in d["releases"] if r["moniker"] == sys.argv[1]))
 else:
     print(d["latest_stable"]["version"])
 ' "$KERNEL_VERSION" <<<"$json"
 			;;
 		*)
-			[[ $KERNEL_VERSION =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]] || die "Invalid KERNEL_VERSION '$KERNEL_VERSION'"
+			[[ $KERNEL_VERSION =~ ^[0-9]+\.[0-9]+(\.[0-9]+|-rc[0-9]+)?$ ]] ||
+				die "Invalid KERNEL_VERSION '$KERNEL_VERSION' (stable | longterm | mainline | X.Y.Z | X.Y-rcN)"
 			echo "$KERNEL_VERSION"
 			;;
 	esac
 }
 
-kernel_majmin() { cut -d. -f1-2 <<<"$1"; }
+kernel_majmin() { cut -d. -f1-2 <<<"${1%%-rc*}"; }
 
 fetch_kernel() {
 	local ver=$1 major=${1%%.*}
 	local dir="$CACHE/kernel" url="$KERNEL_ORG/v${major}.x"
 	local tb="$dir/linux-$ver.tar.xz" sums want
 	as_user mkdir -p "$dir"
+	if [[ $ver == *-rc* ]]; then
+		tb="$dir/linux-$ver.tar.gz"
+		if [[ ! -s $tb ]]; then
+			step "Downloading linux-$ver.tar.gz (release candidate)"
+			as_user curl -fL --retry 3 -o "$tb.part" "$KERNEL_RC_URL/linux-$ver.tar.gz" >&2
+			as_user mv "$tb.part" "$tb"
+		fi
+		warn "kernel.org publishes no checksums for -rc snapshots - linux-$ver.tar.gz not verified"
+		echo "$tb"
+		return 0
+	fi
 	if [[ ! -s $tb ]]; then
 		step "Downloading linux-$ver.tar.xz"
 		as_user curl -fL --retry 3 -o "$tb.part" "$url/linux-$ver.tar.xz" >&2
@@ -328,7 +342,8 @@ kernel_stage() {
 		step "Using a retrying 'install' wrapper (uutils install -D race, Ubuntu LP#2151166)"
 	fi
 
-	local pkgver="${ver}-${BUILD_ID}" profiles=""
+	# 7.4-rc3 -> 7.4~rc3, so apt sorts it below the final 7.4 and upgrades to it
+	local pkgver="${ver/-rc/\~rc}-${BUILD_ID}" profiles=""
 	if [[ $KERNEL_HEADERS == no || ($KERNEL_HEADERS == auto && -n $CROSS_COMPILE) ]]; then
 		profiles="pkg.linux-upstream.nokernelheaders"
 		step "Skipping linux-headers (KERNEL_HEADERS=$KERNEL_HEADERS)"

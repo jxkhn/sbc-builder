@@ -30,7 +30,7 @@ opt PKG_MAINTAINER "Target" string "SBC image builder <root@localhost>" "" "Main
 # ---------------------------------------------------------------- Kernel
 opt KERNEL_SOURCE  "Kernel" choice mainline "mainline debian debian-backports prebuilt" \
 	"mainline = build kernel.org source here | debian(-backports) = Debian's linux-image-arm64 | prebuilt = your own .debs"
-opt KERNEL_VERSION "Kernel" string stable "" "kernel.org version: stable | longterm | X.Y.Z (e.g. 7.2.8)" \
+opt KERNEL_VERSION "Kernel" string stable "" "kernel.org version: stable | longterm | mainline (newest tag, may be an -rc) | X.Y.Z (e.g. 7.2.8) | X.Y-rcN (e.g. 7.4-rc3)" \
 	'[[ $KERNEL_SOURCE == mainline ]]'
 opt KERNEL_CONFIG  "Kernel" choice defconfig "defconfig armbian file" \
 	"Base config: arm64 defconfig | imported Armbian config | a file (e.g. zcat /proc/config.gz from a fleet unit). Fragments are merged on top." \
